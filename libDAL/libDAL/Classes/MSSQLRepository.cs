@@ -65,7 +65,7 @@ namespace DataRepositories
             }
             catch (System.Exception)
             {
-                Debugger.Break();
+                throw ex;
             }
         }
 

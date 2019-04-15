@@ -56,7 +56,7 @@ namespace DataRepositories.Classes
             }
             catch (Exception ex)
             {
-                Debugger.Break();
+                throw ex;
             }
             finally
             {
@@ -86,7 +86,7 @@ namespace DataRepositories.Classes
             }
             catch (Exception ex)
             {
-                Debugger.Break();
+                throw ex;
             }
             finally
             {
