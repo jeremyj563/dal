@@ -1,6 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using DataRepositories.Extensions;
 using DataRepositories.Classes;
 
@@ -63,7 +63,7 @@ namespace DataRepositories
                     bulkCopy.WriteToServer(records.CopyToDataTable());
                 }
             }
-            catch (System.Exception)
+            catch (Exception ex)
             {
                 throw ex;
             }
