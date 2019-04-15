@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
-using System.Data.Common;
 
-namespace DataRepositories
+namespace DataRepositories.Interfaces
 {
     public interface IDataRepository
     {
@@ -13,6 +12,14 @@ namespace DataRepositories
         /// <param name="record">The domain object instance containing the new record.</param>
         /// <returns>The ID of the newly created record.</returns>
         int New<T>(string cmd, T record) where T : new();
+
+        /// <summary>
+        /// Creates new records according to the schema defined by the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type that defines the record schema.</typeparam>
+        /// <param name="cmd">The command to create the new records.</param>
+        /// <param name="records">The collection of domain object instances containing the new records.</param>
+        void New<T>(IEnumerable<T> records, string tableName) where T : new();
 
         /// <summary>
         /// Retrieves a collection of records according to the schema defined by the specified type.

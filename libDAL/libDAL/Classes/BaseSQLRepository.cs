@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
+using System.Data.Entity.Design.PluralizationServices;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
+using DataRepositories.Interfaces;
 
-namespace DataRepositories
+namespace DataRepositories.Classes
 {
     public abstract class BaseSQLRepository : IDataRepository
     {
@@ -22,6 +25,7 @@ namespace DataRepositories
         #region External Interface
 
         public abstract int New<T>(string cmd, T record) where T : new();
+        public abstract void New<T>(IEnumerable<T> records, string tableName) where T : new();
         public abstract IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
         public abstract int Edit<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
         public abstract int Remove<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
@@ -74,8 +78,8 @@ namespace DataRepositories
                 using (var command = NewCommand<TConnection, TCommand>(cmd + this.IDCommand))
                 {
                     AddParameters(command, record, @params);
-                    var id = command.ExecuteScalar();
 
+                    var id = command.ExecuteScalar();
                     if (id is int)
                         result = (int)id;
                 }
@@ -166,6 +170,16 @@ namespace DataRepositories
         protected internal PropertyInfo[] GetProperties<TRecord>()
         {
             return typeof(TRecord).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        }
+
+        protected internal string Pluralize(ref string text)
+        {
+            var info = new CultureInfo("en-us");
+            var service = PluralizationService.CreateService(info);
+            if (service.IsSingular(text))
+                text = service.Pluralize(text);
+
+            return text;
         }
 
         #endregion

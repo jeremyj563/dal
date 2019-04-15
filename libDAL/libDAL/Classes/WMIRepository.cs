@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 
-namespace DataRepositories
+namespace DataRepositories.Classes
 {
     public class WMIRepository //: IDataRepository
     {

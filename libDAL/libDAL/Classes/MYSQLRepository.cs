@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using MySql.Data.MySqlClient;
 
-namespace DataRepositories
+namespace DataRepositories.Classes
 {
     public class MYSQLRepository : BaseSQLRepository
     {
@@ -14,6 +14,11 @@ namespace DataRepositories
             int id = base.NonQuery<MySqlConnection, MySqlCommand, T>(cmd, record, null);
 
             return id;
+        }
+
+        public override void New<T>(IEnumerable<T> records, string tableName)
+        {
+            throw new System.NotImplementedException();
         }
 
         public override IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null)

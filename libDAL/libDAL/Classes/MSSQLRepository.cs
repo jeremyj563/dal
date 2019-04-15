@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Diagnostics;
+using DataRepositories.Extensions;
 
-namespace DataRepositories
+namespace DataRepositories.Classes
 {
     public class MSSQLRepository : BaseSQLRepository
     {
@@ -9,11 +11,18 @@ namespace DataRepositories
         {
         }
 
+        #region External Interface
+
         public override int New<T>(string cmd, T record)
         {
             var id = base.NonQuery<SqlConnection, SqlCommand, T>(cmd, record, null);
 
             return id;
+        }
+
+        public override void New<T>(IEnumerable<T> records, string tableName = null)
+        {
+            BulkInsert(records, tableName);
         }
 
         public override IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null)
@@ -36,5 +45,29 @@ namespace DataRepositories
 
             return id;
         }
+
+        #endregion
+
+        #region Internal Methods
+
+        private void BulkInsert<T>(IEnumerable<T> records, string tableName = null)
+        {
+            if (string.IsNullOrWhiteSpace(tableName))
+                tableName = base.Pluralize(ref tableName);
+
+            try
+            {
+                using (var bulkCopy = new SqlBulkCopy(base.ConnectionString) {DestinationTableName = tableName})
+                {
+                    bulkCopy.WriteToServer(records.CopyToDataTable());
+                }
+            }
+            catch (System.Exception)
+            {
+                Debugger.Break();
+            }
+        }
+
+        #endregion
     }
 }
