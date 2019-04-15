@@ -112,7 +112,7 @@
       <Name>libDAL</Name>
     </ProjectReference>
     <ProjectReference Include="..\Models\Models.csproj">
-      <Project>{ed882ba6-e6e6-432a-b54b-d0d5901e3faa}</Project>
+      <Project>{8748e83d-4fb3-4ace-904e-874efd12d283}</Project>
       <Name>Models</Name>
     </ProjectReference>
   </ItemGroup>

@@ -2,8 +2,9 @@
 using System.Data.SqlClient;
 using System.Diagnostics;
 using DataRepositories.Extensions;
+using DataRepositories.Classes;
 
-namespace DataRepositories.Classes
+namespace DataRepositories
 {
     public class MSSQLRepository : BaseSQLRepository
     {

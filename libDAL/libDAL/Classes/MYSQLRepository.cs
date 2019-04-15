@@ -1,7 +1,8 @@
 ﻿using System.Collections.Generic;
 using MySql.Data.MySqlClient;
+using DataRepositories.Classes;
 
-namespace DataRepositories.Classes
+namespace DataRepositories
 {
     public class MYSQLRepository : BaseSQLRepository
     {

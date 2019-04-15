@@ -1,7 +1,8 @@
 ﻿using Npgsql;
 using System.Collections.Generic;
+using DataRepositories.Classes;
 
-namespace DataRepositories.Classes
+namespace DataRepositories
 {
     public class PGSQLRepository : BaseSQLRepository
     {
