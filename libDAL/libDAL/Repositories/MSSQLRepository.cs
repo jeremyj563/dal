@@ -53,7 +53,10 @@ namespace DataRepositories
         private void BulkInsert<T>(IEnumerable<T> records, string tableName = null)
         {
             if (string.IsNullOrWhiteSpace(tableName))
-                tableName = base.Pluralize(ref tableName);
+            {
+                tableName = typeof(T).Name;
+                base.Pluralize(ref tableName);
+            }
 
             try
             {
