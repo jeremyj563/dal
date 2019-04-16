@@ -16,6 +16,9 @@ Module Module1
         ' Get all 'Employees'
         Dim emps = db.Get(Of Employee)("SELECT [ID], [Name], [Email] FROM [Employees]")
 
+        ' Bulk insert all 'Employees' into the 'PR_Employees' table
+        db.[New](emps, "PR_Employees")
+
         ' Get 'Employee' with id 123
         Dim empID = (NameOf(Employee.ID), 123)
         Dim emp123 = db.Get(Of Employee)("SELECT [ID], [Name], [Email] FROM [Employees] WHERE [ID] = @ID", params:={empID}).First()

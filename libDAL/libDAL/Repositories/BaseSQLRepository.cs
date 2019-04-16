@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.Entity.Design.PluralizationServices;
-using System.Diagnostics;
 using System.Globalization;
 using System.Reflection;
 using DataRepositories.Interfaces;
 
-namespace DataRepositories.Classes
+namespace DataRepositories
 {
     public abstract class BaseSQLRepository : IDataRepository
     {

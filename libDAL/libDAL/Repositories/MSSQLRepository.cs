@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using DataRepositories.Extensions;
-using DataRepositories.Classes;
 
 namespace DataRepositories
 {

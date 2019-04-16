@@ -19,6 +19,9 @@ namespace TestConsoleApp
             // Get all 'Employees'
             var emps = db.Get<Employee>("SELECT [ID],[Name],[Email] FROM [Employees]");
 
+            // Bulk insert all 'Employees' into the 'PR_Employees' table
+            db.New(emps, "PR_Employees");
+
             // Get 'Employee' with id 123
             (string, object)empID = (nameof(Employee.ID), 123);
             var emp123 = db.Get<Employee>("SELECT [ID],[Name],[Email] FROM [Employees] WHERE [ID] = @ID", @params: new[] {empID}).First();

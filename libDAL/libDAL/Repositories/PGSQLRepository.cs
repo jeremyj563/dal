@@ -1,6 +1,5 @@
 ﻿using Npgsql;
 using System.Collections.Generic;
-using DataRepositories.Classes;
 
 namespace DataRepositories
 {

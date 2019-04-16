@@ -81,14 +81,14 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Classes\BaseSQLRepository.cs" />
+    <Compile Include="Repositories\BaseSQLRepository.cs" />
     <Compile Include="Extensions\IEnumerableGenericExtensions.cs" />
     <Compile Include="Interfaces\IDataRepository.cs" />
-    <Compile Include="Classes\MSSQLRepository.cs" />
-    <Compile Include="Classes\MYSQLRepository.cs" />
-    <Compile Include="Classes\PGSQLRepository.cs" />
+    <Compile Include="Repositories\MSSQLRepository.cs" />
+    <Compile Include="Repositories\MYSQLRepository.cs" />
+    <Compile Include="Repositories\PGSQLRepository.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Classes\WMIRepository.cs" />
+    <Compile Include="Repositories\WMIRepository.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
