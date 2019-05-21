@@ -13,6 +13,7 @@ variables:
   nuspec: '*.nuspec'
   nuconf: 'nuget.config'
   pkgconf: '**/packages.config'
+  pkgdir: 'packages/'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
@@ -26,6 +27,7 @@ steps:
     feedsToUse: config
     nugetConfigPath: '$(nuconf)'
     restoreSolution: '$(pkgconf)'
+    packagesDirectory: '$(pkgdir)'
 
 - task: VSBuild@1
   inputs:
