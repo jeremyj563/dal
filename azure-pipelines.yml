@@ -1,4 +1,4 @@
-# initial test
+# Basic build pipeline implemented with GitVersion (Continuous deployment mode) for automated versioning
 
 trigger:
 - master
@@ -38,7 +38,7 @@ steps:
     configuration: '$(buildConfiguration)'
 
 - task: GitVersion@4
-  displayName: 'GitVersion'
+  displayName: 'Execute GitVersion'
   inputs:
     updateAssemblyInfo: true
 
