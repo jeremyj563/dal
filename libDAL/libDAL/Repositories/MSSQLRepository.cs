@@ -8,7 +8,7 @@ namespace DataRepositories
     public class MSSQLRepository : BaseSQLRepository
     {
         public MSSQLRepository(string connectionString, string idCommand = "; SELECT SCOPE_IDENTITY()") : base(connectionString, idCommand)
-        {
+        {// testing ci pipeline
         }
 
         #region External Interface
