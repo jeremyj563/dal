@@ -1,8 +1,7 @@
-# Basic CD pipeline implemented with GitVersion (Continuous deployment mode) for automated versioning
+# Basic CI pipeline implemented with GitVersion (Continuous deployment mode) for automated versioning
 
 trigger:
-- release/*
-- feature/*
+- master
 
 pool:
   vmImage: 'windows-latest'
