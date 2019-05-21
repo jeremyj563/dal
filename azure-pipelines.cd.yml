@@ -62,4 +62,4 @@ steps:
   displayName: 'NuGet Push'
   inputs:
     command: push
-publishVstsFeed: 'jmj-nuget.ci'
+    publishVstsFeed: 'jmj-nuget.ci'
