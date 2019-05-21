@@ -10,8 +10,8 @@ pool:
 
 variables:
   solution: '**/*.nuspec'
-  nuspec: '/*.nuspec'
-  nuconf: '/nuget.config'
+  nuspec: '*.nuspec'
+  nuconf: 'nuget.config'
   pkgconf: '**/packages.config'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
