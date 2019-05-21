@@ -9,7 +9,7 @@ pool:
   vmImage: 'windows-latest'
 
 variables:
-  solution: '**/*.nuspec'
+  solution: '**/*.sln'
   nuspec: '*.nuspec'
   nuconf: 'nuget.config'
   pkgconf: '**/packages.config'
