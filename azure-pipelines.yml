@@ -13,7 +13,7 @@ variables:
   nuspec: '*.nuspec'
   nuconf: 'nuget.config'
   pkgconf: '**/packages.config'
-  pkgdir: 'packages/'
+  pkgdir: '../packages/'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
