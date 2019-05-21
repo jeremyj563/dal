@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
     <metadata>
-        <id>it-dal</id>
+        <id>dal</id>
         <version>1.0.0</version>
         <authors>Jeremy Johnson</authors>
-        <description>it-dal</description>
+        <description>dal</description>
     </metadata>
     <files>
         <file src="libDAL\libDAL\bin\Release\**" target="lib\net47"/>
