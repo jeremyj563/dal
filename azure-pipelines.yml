@@ -1,0 +1,48 @@
+# Initial Test
+
+trigger:
+- master
+- release/*
+- feature/*
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.nuspec'
+  nuspec: '/*.nuspec'
+  pkgsconf: '/packages.config'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@0
+
+- task: NuGetCommand@2
+  inputs:
+    command: restore
+    restoreSolution: '$(pkgsconf)'
+    feedsToUse: 'config'
+
+- task: VSBuild@1
+  inputs:
+    solution: '$(solution)'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: GitVersion@4
+  displayName: 'GitVersion'
+  inputs:
+    updateAssemblyInfo: true
+
+- task: NuGetCommand@2
+  displayName: 'NuGet Pack'
+  inputs:
+    command: pack
+    packagesToPack: '$(nuspec)'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet Push'
+  inputs:
+    command: push
+    publishVstsFeed: 'jmj-nuget.ci'
