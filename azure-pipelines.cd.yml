@@ -1,0 +1,65 @@
+# Basic CD pipeline implemented with GitVersion (Continuous deployment mode) for automated versioning
+
+trigger:
+- release/*
+- feature/*
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  solution: '**/*.sln'
+  nuspec: '*.nuspec'
+  nuconf: 'nuget.config'
+  pkgconf: '**/packages.config'
+  pkgdir: '../packages/'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+
+steps:
+- task: NuGetToolInstaller@0
+  displayName: 'Download Latest NuGet.exe'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet Restore'
+  inputs:
+    command: restore
+    feedsToUse: config
+    nugetConfigPath: '$(nuconf)'
+    restoreSolution: '$(pkgconf)'
+    packagesDirectory: '$(pkgdir)'
+
+- task: VSBuild@1
+  displayName: 'Build Solution'
+  inputs:
+    solution: '$(solution)'
+    platform: '$(buildPlatform)'
+    configuration: '$(buildConfiguration)'
+
+- task: GitVersion@4
+  displayName: 'Execute GitVersion'
+  inputs:
+    updateAssemblyInfo: true
+
+- task: PowerShell@2
+  displayName: 'GitVersion Inline PowerShell Script'
+  inputs:
+    targetType: inline
+    script: '$UtcDateTime = (Get-Date).ToUniversalTime();
+             $FormattedDateTime = (Get-Date -Date $UtcDateTime -Format "yyyyMMdd-HHmmss");
+             $CI_Version = "$env:GITVERSION_MAJORMINORPATCH-ci-$FormattedDateTime";
+             Write-Host ("##vso[task.setvariable variable=CI_Version;]$CI_Version");'
+  
+- task: NuGetCommand@2
+  displayName: 'NuGet Pack'
+  inputs:
+    command: pack
+    packagesToPack: '$(nuspec)'
+    versioningScheme: byEnvVar
+    versionEnvVar: 'CI_Version'
+
+- task: NuGetCommand@2
+  displayName: 'NuGet Push'
+  inputs:
+    command: push
+publishVstsFeed: 'jmj-nuget.ci'
