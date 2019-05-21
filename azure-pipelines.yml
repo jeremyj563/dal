@@ -1,4 +1,4 @@
-# Initial Test
+# initial test
 
 trigger:
 - master
@@ -10,8 +10,9 @@ pool:
 
 variables:
   solution: '**/*.nuspec'
-  nuspec: '/*.nuspec'
-  pkgsconf: '/packages.config'
+  nuspec: '**/*.nuspec'
+  nuconf: '**/nuget.config'
+  pkgconf: '**/packages.config'
   buildPlatform: 'Any CPU'
   buildConfiguration: 'Release'
 
@@ -19,10 +20,12 @@ steps:
 - task: NuGetToolInstaller@0
 
 - task: NuGetCommand@2
+  displayName: 'NuGet Restore'
   inputs:
     command: restore
-    restoreSolution: '$(pkgsconf)'
-    feedsToUse: 'config'
+    feedsToUse: config
+    nugetConfigPath: '$(nuconf)'
+    restoreSolution: '$(pkgconf)'
 
 - task: VSBuild@1
   inputs:
