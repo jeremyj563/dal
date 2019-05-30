@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.Entity.Design.PluralizationServices;
 using System.Globalization;
+using System.Linq;
 using System.Reflection;
 using DataRepositories.Interfaces;
 
@@ -25,7 +26,7 @@ namespace DataRepositories
 
         public abstract int New<T>(string cmd, T record) where T : new();
         public abstract void New<T>(IEnumerable<T> records, string tableName) where T : new();
-        public abstract IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
+        public abstract IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
         public abstract int Edit<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
         public abstract int Remove<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
 
@@ -33,7 +34,7 @@ namespace DataRepositories
 
         #region Internal Methods
 
-        protected internal IEnumerable<TRecord> Query<TConnection, TCommand, TRecord>(string cmd, (string, object)[] @params)
+        protected internal IQueryable<TRecord> Query<TConnection, TCommand, TRecord>(string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
             where TRecord : new()
@@ -62,7 +63,7 @@ namespace DataRepositories
                 this.Connection.Close();
             }
 
-            return records;
+            return records.AsQueryable();
         }
 
         protected internal int NonQuery<TConnection, TCommand, TRecord>(string cmd, TRecord record, (string, object)[] @params)
@@ -131,14 +132,12 @@ namespace DataRepositories
                     if (property.CanRead)
                     {
                         var value = property.GetValue(record, null);
+                        if (value == null) value = DBNull.Value;
 
-                        if (value != null)
-                        {
-                            var parameter = command.CreateParameter();
-                            parameter.ParameterName = property.Name;
-                            parameter.Value = value;
-                            command.Parameters.Add(parameter);
-                        }
+                        var parameter = command.CreateParameter();
+                        parameter.ParameterName = property.Name;
+                        parameter.Value = value;
+                        command.Parameters.Add(parameter);
                     }
                 }
             }

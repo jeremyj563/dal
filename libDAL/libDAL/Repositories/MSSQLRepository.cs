@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
+using System.Linq;
 using DataRepositories.Extensions;
 
 namespace DataRepositories
@@ -8,7 +9,7 @@ namespace DataRepositories
     public class MSSQLRepository : BaseSQLRepository
     {
         public MSSQLRepository(string connectionString, string idCommand = "; SELECT SCOPE_IDENTITY()") : base(connectionString, idCommand)
-        {// testing ci pipeline
+        {
         }
 
         #region External Interface
@@ -25,7 +26,7 @@ namespace DataRepositories
             BulkInsert(records, tableName);
         }
 
-        public override IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null)
+        public override IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null)
         {
             var records = base.Query<SqlConnection, SqlCommand, T>(cmd, @params);
 

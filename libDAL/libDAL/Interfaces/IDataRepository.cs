@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace DataRepositories.Interfaces
 {
@@ -28,7 +29,7 @@ namespace DataRepositories.Interfaces
         /// <param name="cmd">The command to retrieve the records.</param>
         /// <param name="params">The optional parameters to be added to the command.</param>
         /// <returns>A collection of domain object instances representing the records returned from the command.</returns>
-        IEnumerable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
+        IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
 
         /// <summary>
         /// Edits a record according to the schema defined by the specified type.
