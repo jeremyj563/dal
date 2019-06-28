@@ -1,6 +1,8 @@
-﻿using Npgsql;
+using Npgsql;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace DataRepositories
 {
@@ -10,37 +12,46 @@ namespace DataRepositories
         {
         }
 
-        public override int New<T>(string cmd, T record)
+        public async override Task<int> NewAsync<T>(string cmd, T record)
         {
-            var id = base.NonQuery<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, null);
+            var id = await base.NonQueryAsync<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, null);
 
             return id;
         }
 
-        public override void New<T>(IEnumerable<T> records, string tableName)
+        public async override Task NewAsync<T>(IEnumerable<T> records, string tableName)
         {
             throw new System.NotImplementedException();
         }
 
-        public override IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null)
+        public async override Task<IQueryable<T>> GetAsync<T>(string cmd, (string, object)[] @params = null)
         {
-            var records = base.Query<NpgsqlConnection, NpgsqlCommand, T>(cmd, @params);
+            var records = await base.QueryAsync<NpgsqlConnection, NpgsqlCommand, T>(cmd, @params);
 
             return records;
         }
 
-        public override int Edit<T>(string cmd, T record = default(T), (string, object)[] @params = null)
+        public async override Task<int> EditAsync<T>(string cmd, T record = default(T), (string, object)[] @params = null)
         {
-            var id = base.NonQuery<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, @params);
+            var id = await base.NonQueryAsync<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, @params);
 
             return id;
         }
 
-        public override int Remove<T>(string cmd, T record = default(T), (string, object)[] @params = null)
+        public async override Task<int> RemoveAsync<T>(string cmd, T record = default(T), (string, object)[] @params = null)
         {
-            var id = base.NonQuery<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, @params);
+            var id = await base.NonQueryAsync<NpgsqlConnection, NpgsqlCommand, T>(cmd, record, @params);
 
             return id;
+        }
+
+        public async override Task<bool> IsConnectionAvailableAsync()
+        {
+            bool result = default(bool);
+            try { result = await base.OpenConnectionAsync<NpgsqlConnection>(); }
+            catch(Exception ex) { /* sliently fail */ }
+
+            return result;
         }
     }
 }
