@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.Entity.Design.PluralizationServices;
 using System.Globalization;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using DataRepositories.Interfaces;
 
 namespace DataRepositories
@@ -24,17 +25,18 @@ namespace DataRepositories
 
         #region External Interface
 
-        public abstract int New<T>(string cmd, T record) where T : new();
-        public abstract void New<T>(IEnumerable<T> records, string tableName) where T : new();
-        public abstract IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null) where T : new();
-        public abstract int Edit<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
-        public abstract int Remove<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
+        public abstract Task<int> NewAsync<T>(string cmd, T record) where T : new();
+        public abstract Task NewAsync<T>(IEnumerable<T> records, string tableName) where T : new();
+        public abstract Task<IQueryable<T>> GetAsync<T>(string cmd, (string, object)[] @params = null) where T : new();
+        public abstract Task<int> EditAsync<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
+        public abstract Task<int> RemoveAsync<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
+        public abstract Task<bool> IsConnectionAvailableAsync();
 
         #endregion
 
         #region Internal Methods
 
-        protected internal IQueryable<TRecord> Query<TConnection, TCommand, TRecord>(string cmd, (string, object)[] @params)
+        protected async internal Task<IQueryable<TRecord>> QueryAsync<TConnection, TCommand, TRecord>(string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
             where TRecord : new()
@@ -43,30 +45,26 @@ namespace DataRepositories
 
             try
             {
-                using (var command = NewCommand<TConnection, TCommand>(cmd))
+                using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
                 {
                     AddParameters<TRecord>(command, @params: @params);
 
                     PropertyInfo[] properties = GetProperties<TRecord>();
                     DbDataReader reader = command.ExecuteReader();
 
-                    while (reader.Read())
+                    while (await reader.ReadAsync())
                         records.Add(NewInstance<TRecord>(properties, reader));
                 }
             }
             catch (Exception ex)
-            {
-                throw ex;
-            }
+            { throw ex; }
             finally
-            {
-                this.Connection.Close();
-            }
+            { this.Connection.Close(); }
 
             return records.AsQueryable();
         }
 
-        protected internal int NonQuery<TConnection, TCommand, TRecord>(string cmd, TRecord record, (string, object)[] @params)
+        protected async internal Task<int> NonQueryAsync<TConnection, TCommand, TRecord>(string cmd, TRecord record, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
             where TRecord : new()
@@ -75,40 +73,49 @@ namespace DataRepositories
 
             try
             {
-                using (var command = NewCommand<TConnection, TCommand>(cmd + this.IDCommand))
+                using (var command = await NewCommandAsync<TConnection, TCommand>(cmd + this.IDCommand))
                 {
                     AddParameters(command, record, @params);
 
-                    var id = command.ExecuteScalar();
+                    var id = await command.ExecuteScalarAsync();
                     if (id is int)
                         result = (int)id;
                 }
             }
             catch (Exception ex)
-            {
-                throw ex;
-            }
+            { throw ex; }
             finally
-            {
-                this.Connection.Close();
-            }
+            { this.Connection.Close(); }
 
             return result;
         }
 
-        protected internal TCommand NewCommand<TConnection, TCommand>(string cmd)
+        protected async internal Task<TCommand> NewCommandAsync<TConnection, TCommand>(string cmd)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
         {
-            this.Connection = new TConnection();
-            this.Connection.ConnectionString = this.ConnectionString;
-            this.Connection.Open();
+            await this.OpenConnectionAsync<TConnection>();
 
             TCommand command = new TCommand();
             command.CommandText = cmd;
             command.Connection = this.Connection;
 
             return command;
+        }
+
+        protected async internal Task<bool> OpenConnectionAsync<TConnection>()
+            where TConnection : DbConnection, new()
+        {
+            try
+            {
+                this.Connection = new TConnection();
+                this.Connection.ConnectionString = this.ConnectionString;
+                await this.Connection.OpenAsync();
+            }
+            catch (Exception ex)
+            { throw ex; }
+
+            return true;
         }
 
         protected internal void AddParameters<TRecord>(DbCommand command, TRecord record = default(TRecord), (string, object)[] @params = null)
@@ -175,7 +182,7 @@ namespace DataRepositories
             var info = new CultureInfo("en-us");
             var service = PluralizationService.CreateService(info);
             if (service.IsSingular(text))
-                text = service.Pluralize(text);
+            { text = service.Pluralize(text); }
 
             return text;
         }
