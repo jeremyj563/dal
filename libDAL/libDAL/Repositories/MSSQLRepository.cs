@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
 using System.Linq;
+using System.Threading.Tasks;
 using DataRepositories.Extensions;
 
 namespace DataRepositories
@@ -14,44 +15,53 @@ namespace DataRepositories
 
         #region External Interface
 
-        public override int New<T>(string cmd, T record)
+        public async override Task<int> NewAsync<T>(string cmd, T record)
         {
-            var id = base.NonQuery<SqlConnection, SqlCommand, T>(cmd, record, null);
+            var id = await base.NonQueryAsync<SqlConnection, SqlCommand, T>(cmd, record, null);
 
             return id;
         }
 
-        public override void New<T>(IEnumerable<T> records, string tableName = null)
+        public async override Task NewAsync<T>(IEnumerable<T> records, string tableName = null)
         {
-            BulkInsert(records, tableName);
+            await BulkInsert(records, tableName);
         }
 
-        public override IQueryable<T> Get<T>(string cmd, (string, object)[] @params = null)
+        public async override Task<IQueryable<T>> GetAsync<T>(string cmd, (string, object)[] @params = null)
         {
-            var records = base.Query<SqlConnection, SqlCommand, T>(cmd, @params);
+            var records = await base.QueryAsync<SqlConnection, SqlCommand, T>(cmd, @params);
 
             return records;
         }
 
-        public override int Edit<T>(string cmd, T record = default(T), (string, object)[] @params = null)
+        public async override Task<int> EditAsync<T>(string cmd, T record = default(T), (string, object)[] @params = null)
         {
-            var id = base.NonQuery<SqlConnection, SqlCommand, T>(cmd, record, @params);
+            var id = await base.NonQueryAsync<SqlConnection, SqlCommand, T>(cmd, record, @params);
 
             return id;
         }
 
-        public override int Remove<T>(string cmd, T record = default(T), (string, object)[] @params = null)
+        public async override Task<int> RemoveAsync<T>(string cmd, T record = default(T), (string, object)[] @params = null)
         {
-            var id = base.NonQuery<SqlConnection, SqlCommand, T>(cmd, record, @params);
+            var id = await base.NonQueryAsync<SqlConnection, SqlCommand, T>(cmd, record, @params);
 
             return id;
+        }
+
+        public async override Task<bool> IsConnectionAvailableAsync()
+        {
+            bool result = default(bool);
+            try { result = await base.OpenConnectionAsync<SqlConnection>(); }
+            catch (Exception ex) { /* sliently fail */ }
+
+            return result;
         }
 
         #endregion
 
         #region Internal Methods
 
-        private void BulkInsert<T>(IEnumerable<T> records, string tableName = null)
+        private async Task BulkInsert<T>(IEnumerable<T> records, string tableName = null)
         {
             if (string.IsNullOrWhiteSpace(tableName))
             {
@@ -63,7 +73,7 @@ namespace DataRepositories
             {
                 using (var bulkCopy = new SqlBulkCopy(base.ConnectionString) {DestinationTableName = tableName})
                 {
-                    bulkCopy.WriteToServer(records.CopyToDataTable());
+                    await bulkCopy.WriteToServerAsync(records.CopyToDataTable());
                 }
             }
             catch (Exception ex)
