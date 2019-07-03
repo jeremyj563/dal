@@ -195,6 +195,7 @@ namespace DataRepositories
         protected internal Dynamic NewDynamicInstance(Dynamic prototype, (string, object)[] properties, DbDataReader reader)
         {
             var instance = prototype.Clone() as Dynamic;
+            instance.Properties.Clear();
 
             foreach ((string key, object o) in properties)
             {
