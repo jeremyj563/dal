@@ -6,6 +6,7 @@ using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using DataRepositories.Classes;
 using DataRepositories.Interfaces;
 
 namespace DataRepositories
@@ -25,49 +26,71 @@ namespace DataRepositories
 
         #region External Interface
 
-        public abstract Task<int> NewAsync<T>(string cmd, T record) where T : new();
-        public abstract Task NewAsync<T>(IEnumerable<T> records, string tableName) where T : new();
-        public abstract Task<IQueryable<T>> GetAsync<T>(string cmd, (string, object)[] @params = null) where T : new();
-        public abstract Task<int> EditAsync<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
-        public abstract Task<int> RemoveAsync<T>(string cmd, T record, (string, object)[] @params = null) where T : new();
+        public abstract Task<int> NewAsync<TSchema>(string cmd, TSchema schema) where TSchema : new();
+        public abstract Task NewAsync<TSchema>(IEnumerable<TSchema> instances, string tableName) where TSchema : new();
+        public abstract Task<IQueryable<TSchema>> GetAsync<TSchema>(string cmd, (string, object)[] @params = null) where TSchema : new();
+        public abstract Task<IQueryable<Dynamic>> GetDynamicAsync(Dynamic schema, string cmd, (string, object)[] @params = null);
+        public abstract Task<int> EditAsync<TSchema>(string cmd, TSchema schema, (string, object)[] @params = null) where TSchema : new();
+        public abstract Task<int> RemoveAsync<TSchema>(string cmd, TSchema schema, (string, object)[] @params = null) where TSchema : new();
         public abstract Task<bool> IsConnectionAvailableAsync();
 
         #endregion
 
         #region Internal Methods
 
-        protected async internal Task<IQueryable<TRecord>> QueryAsync<TConnection, TCommand, TRecord>(string cmd, (string, object)[] @params)
+        protected async internal Task<IQueryable<TSchema>> QueryAsync<TConnection, TCommand, TSchema>(string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
-            where TRecord : new()
+            where TSchema : new()
         {
-            var records = new List<TRecord>();
+            var instances = new List<TSchema>();
 
             try
             {
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
                 {
-                    AddParameters<TRecord>(command, @params: @params);
+                    AddParameters<TSchema>(command, @params: @params);
+                    var properties = GetProperties<TSchema>();
 
-                    PropertyInfo[] properties = GetProperties<TRecord>();
                     DbDataReader reader = command.ExecuteReader();
-
                     while (await reader.ReadAsync())
-                        records.Add(NewInstance<TRecord>(properties, reader));
+                    { instances.Add(NewInstance<TSchema>(properties, reader)); }
                 }
             }
-            catch (Exception ex)
-            { throw ex; }
-            finally
-            { this.Connection.Close(); }
+            catch (Exception) { throw; }
+            finally { this.Connection.Close(); }
 
-            return records.AsQueryable();
+            return instances.AsQueryable();
         }
 
-        protected async internal Task<int> NonQueryAsync<TConnection, TCommand, TRecord>(string cmd, TRecord record, (string, object)[] @params)
+        protected async internal Task<IQueryable<Dynamic>> QueryDynamicAsync<TConnection, TCommand>(Dynamic schema, string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
-            where TRecord : new()
+        {
+            var instances = new List<Dynamic>();
+
+            try
+            {
+                using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
+                {
+                    AddParameters<dynamic>(command, @params: @params);
+                    (string, object)[] properties = GetDynamicProperties(schema);
+
+                    DbDataReader reader = command.ExecuteReader();
+                    while (await reader.ReadAsync())
+                    { instances.Add(NewDynamicInstance(schema, properties, reader)); }
+                }
+            }
+            catch (Exception) { throw; }
+            finally { this.Connection.Close(); }
+
+            return instances.AsQueryable();
+        }
+
+        protected async internal Task<int> NonQueryAsync<TConnection, TCommand, TSchema>(string cmd, TSchema schema, (string, object)[] @params)
+            where TConnection : DbConnection, new()
+            where TCommand : DbCommand, new()
+            where TSchema : new()
         {
             int result = default(int);
 
@@ -75,17 +98,15 @@ namespace DataRepositories
             {
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd + this.IDCommand))
                 {
-                    AddParameters(command, record, @params);
+                    AddParameters(command, schema, @params);
 
                     var id = await command.ExecuteScalarAsync();
                     if (id is int)
-                        result = (int)id;
+                    { result = (int)id; }
                 }
             }
-            catch (Exception ex)
-            { throw ex; }
-            finally
-            { this.Connection.Close(); }
+            catch (Exception) { throw; }
+            finally { this.Connection.Close(); }
 
             return result;
         }
@@ -112,13 +133,12 @@ namespace DataRepositories
                 this.Connection.ConnectionString = this.ConnectionString;
                 await this.Connection.OpenAsync();
             }
-            catch (Exception ex)
-            { throw ex; }
+            catch (Exception) { throw; }
 
             return true;
         }
 
-        protected internal void AddParameters<TRecord>(DbCommand command, TRecord record = default(TRecord), (string, object)[] @params = null)
+        protected internal void AddParameters<TSchema>(DbCommand command, TSchema schema = default(TSchema), (string, object)[] @params = null)
         {
             if (@params != null)
             {
@@ -132,13 +152,13 @@ namespace DataRepositories
                 }
             }
 
-            if (record != null)
+            if (schema != null)
             {
-                foreach (PropertyInfo property in GetProperties<TRecord>())
+                foreach (PropertyInfo property in GetProperties<TSchema>())
                 {
                     if (property.CanRead)
                     {
-                        var value = property.GetValue(record, null);
+                        var value = property.GetValue(schema, null);
                         if (value == null) value = DBNull.Value;
 
                         var parameter = command.CreateParameter();
@@ -150,9 +170,9 @@ namespace DataRepositories
             }
         }
 
-        protected internal TRecord NewInstance<TRecord>(PropertyInfo[] properties, DbDataReader reader) where TRecord : new()
+        protected internal TSchema NewInstance<TSchema>(PropertyInfo[] properties, DbDataReader reader) where TSchema : new()
         {
-            var instance = new TRecord();
+            var instance = new TSchema();
 
             foreach (PropertyInfo property in properties)
             {
@@ -162,7 +182,7 @@ namespace DataRepositories
                     {
                         var value = reader[property.Name];
                         if (value is string)
-                            value = (value as string).Trim();
+                        { value = (value as string).Trim(); }
 
                         property.SetValue(instance, value, null);
                     }
@@ -172,9 +192,41 @@ namespace DataRepositories
             return instance;
         }
 
-        protected internal PropertyInfo[] GetProperties<TRecord>()
+        protected internal Dynamic NewDynamicInstance(Dynamic prototype, (string, object)[] properties, DbDataReader reader)
         {
-            return typeof(TRecord).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var instance = prototype.Clone() as Dynamic;
+
+            foreach ((string key, object o) in properties)
+            {
+                if (!reader.IsDBNull(reader.GetOrdinal(key)))
+                {
+                    var value = reader[key];
+                    if (value is string)
+                    { value = (value as string).Trim(); }
+
+                    instance[key] = value;
+                }
+            }
+
+            return instance;
+        }
+
+        protected internal PropertyInfo[] GetProperties<TSchema>()
+        {
+            return typeof(TSchema).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        }
+
+        protected internal (string, object)[] GetDynamicProperties(Dynamic instance)
+        {
+            var properties = new List<(string, object)>();
+
+            if (instance != null)
+            {
+                foreach (var kvp in instance.Properties)
+                { properties.Add((kvp.Key, kvp.Value)); }
+            }
+
+            return properties.ToArray();
         }
 
         protected internal string Pluralize(ref string text)
