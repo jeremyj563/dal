@@ -74,7 +74,7 @@ namespace DataRepositories
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
                 {
                     AddParameters<dynamic>(command, @params: @params);
-                    (string, object)[] properties = GetDynamicProperties(schema);
+                    string[] properties = GetDynamicProperties(schema);
 
                     DbDataReader reader = command.ExecuteReader();
                     while (await reader.ReadAsync())
@@ -192,20 +192,20 @@ namespace DataRepositories
             return instance;
         }
 
-        protected internal Dynamic NewDynamicInstance(Dynamic prototype, (string, object)[] properties, DbDataReader reader)
+        protected internal Dynamic NewDynamicInstance(Dynamic prototype, string[] properties, DbDataReader reader)
         {
             var instance = prototype.Clone() as Dynamic;
             instance.Properties.Clear();
 
-            foreach ((string key, object o) in properties)
+            foreach (string property in properties)
             {
-                if (!reader.IsDBNull(reader.GetOrdinal(key)))
+                if (!reader.IsDBNull(reader.GetOrdinal(property)))
                 {
-                    var value = reader[key];
+                    var value = reader[property];
                     if (value is string)
                     { value = (value as string).Trim(); }
 
-                    instance[key] = value;
+                    instance[property] = value;
                 }
             }
 
@@ -217,17 +217,9 @@ namespace DataRepositories
             return typeof(TSchema).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         }
 
-        protected internal (string, object)[] GetDynamicProperties(Dynamic instance)
+        protected internal string[] GetDynamicProperties(Dynamic instance)
         {
-            var properties = new List<(string, object)>();
-
-            if (instance != null)
-            {
-                foreach (var kvp in instance.Properties)
-                { properties.Add((kvp.Key, kvp.Value)); }
-            }
-
-            return properties.ToArray();
+            return instance.Properties.Select(p => p.Key).ToArray();
         }
 
         protected internal string Pluralize(ref string text)
