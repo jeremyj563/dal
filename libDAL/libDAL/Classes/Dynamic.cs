@@ -1,7 +1,3 @@
-// Adapted from:
-// Creating a dynamic, extensible C# Expando Object
-// https://weblog.west-wind.com/posts/2012/feb/08/creating-a-dynamic-extensible-c-expando-object
-
 using System;
 using System.Reflection;
 using System.Collections.Generic;
@@ -10,10 +6,20 @@ using System.Linq;
 
 namespace DataRepositories.Classes
 {
+    /// <summary>
+    /// Adapted from: Creating a dynamic, extensible C# Expando Object
+    /// Source: https://weblog.west-wind.com/posts/2012/feb/08/creating-a-dynamic-extensible-c-expando-object
+    /// </summary>
     public class Dynamic : DynamicObject, ICloneable
     {
+        #region Public Properties
+
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
         public string TableName { get; set; }
+
+        #endregion
+
+        #region Private Properties
 
         private PropertyInfo[] _InstancePropertyInfo;
         private PropertyInfo[] InstancePropertyInfo
@@ -29,9 +35,10 @@ namespace DataRepositories.Classes
                 return _InstancePropertyInfo;
             }
         }
-
         private object Instance { get; set; }
         private Type InstanceType { get; set; }
+
+        #endregion
 
         public Dynamic()
         {
@@ -43,88 +50,13 @@ namespace DataRepositories.Classes
             Initialize(instance);
         }
 
+        #region Protected Methods
+
         protected virtual void Initialize(object instance)
         {
             this.Instance = instance;
             if (instance != null)
                 InstanceType = instance.GetType();
-        }
-
-        /// <summary>
-        /// Try to retrieve a member by name first from instance properties, followed by the collection entries.
-        /// </summary>
-        /// <param name="binder"></param>
-        /// <param name="result"></param>
-        public override bool TryGetMember(GetMemberBinder binder, out object result)
-        {
-            result = null;
-
-            // First check the Properties collection for member
-            if (this.Properties.Keys.Contains(binder.Name))
-            {
-                result = this.Properties[binder.Name];
-                return true;
-            }
-
-            // Next check for Public properties via Reflection
-            if (this.Instance != null)
-            {
-                try
-                { return GetProperty(this.Instance, binder.Name, out result); }
-                catch { /* Silently fail */ }
-            }
-
-            // Failed to retrieve a property
-            result = null;
-            return false;
-        }
-
-        /// <summary>
-        /// Property setter implementation tries to retrieve value from instance first then into this object
-        /// </summary>
-        /// <param name="binder"></param>
-        /// <param name="value"></param>
-        public override bool TrySetMember(SetMemberBinder binder, object value)
-        {
-
-            // first check to see if there's a native property to set
-            if (this.Instance != null)
-            {
-                try
-                {
-                    bool result = SetProperty(this.Instance, binder.Name, value);
-                    if (result)
-                    { return true; }
-                }
-                catch { }
-            }
-
-            // no match - set or add to dictionary
-            this.Properties[binder.Name] = value;
-            return true;
-        }
-
-        /// <summary>
-        /// Dynamic invocation method. Currently allows only for Reflection based operation (no ability to add methods dynamically).
-        /// </summary>
-        /// <param name="binder"></param>
-        /// <param name="args"></param>
-        /// <param name="result"></param>
-        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
-        {
-            if (this.Instance != null)
-            {
-                try
-                {
-                    // check instance passed in for methods to invoke
-                    if (InvokeMethod(this.Instance, binder.Name, args, out result))
-                    { return true; }
-                }
-                catch { /* Silently fail */ }
-            }
-
-            result = null;
-            return false;
         }
 
         /// <summary>
@@ -199,6 +131,87 @@ namespace DataRepositories.Classes
                 var info = memberInfos[0] as MethodInfo;
                 result = info.Invoke(this.Instance, args);
                 return true;
+            }
+
+            result = null;
+            return false;
+        }
+
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
+        /// Try to retrieve a member by name first from instance properties, followed by the collection entries.
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <param name="result"></param>
+        public override bool TryGetMember(GetMemberBinder binder, out object result)
+        {
+            result = null;
+
+            // First check the Properties collection for member
+            if (this.Properties.Keys.Contains(binder.Name))
+            {
+                result = this.Properties[binder.Name];
+                return true;
+            }
+
+            // Next check for Public properties via Reflection
+            if (this.Instance != null)
+            {
+                try
+                { return GetProperty(this.Instance, binder.Name, out result); }
+                catch { /* Silently fail */ }
+            }
+
+            // Failed to retrieve a property
+            result = null;
+            return false;
+        }
+
+        /// <summary>
+        /// Property setter implementation tries to retrieve value from instance first then into this object
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <param name="value"></param>
+        public override bool TrySetMember(SetMemberBinder binder, object value)
+        {
+
+            // first check to see if there's a native property to set
+            if (this.Instance != null)
+            {
+                try
+                {
+                    bool result = SetProperty(this.Instance, binder.Name, value);
+                    if (result)
+                    { return true; }
+                }
+                catch { }
+            }
+
+            // no match - set or add to dictionary
+            this.Properties[binder.Name] = value;
+            return true;
+        }
+
+        /// <summary>
+        /// Dynamic invocation method. Currently allows only for Reflection based operation (no ability to add methods dynamically).
+        /// </summary>
+        /// <param name="binder"></param>
+        /// <param name="args"></param>
+        /// <param name="result"></param>
+        public override bool TryInvokeMember(InvokeMemberBinder binder, object[] args, out object result)
+        {
+            if (this.Instance != null)
+            {
+                try
+                {
+                    // check instance passed in for methods to invoke
+                    if (InvokeMethod(this.Instance, binder.Name, args, out result))
+                    { return true; }
+                }
+                catch { /* Silently fail */ }
             }
 
             result = null;
@@ -292,5 +305,7 @@ namespace DataRepositories.Classes
         {
             return new Dynamic(this);
         }
+
+        #endregion
     }
 }
