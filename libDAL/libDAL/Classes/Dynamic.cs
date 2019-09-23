@@ -13,8 +13,9 @@ namespace DataRepositories.Classes
     public class Dynamic : DynamicObject, ICloneable
     {
         public Dictionary<string, object> Properties { get; set; } = new Dictionary<string, object>();
+        public string TableName { get; set; }
 
-        PropertyInfo[] _InstancePropertyInfo;
+        private PropertyInfo[] _InstancePropertyInfo;
         private PropertyInfo[] InstancePropertyInfo
         {
             get
@@ -233,15 +234,18 @@ namespace DataRepositories.Classes
             }
             set
             {
-                if (this.Properties.ContainsKey(key))
-                { this.Properties[key] = value; return; }
+                if (key != null)
+                {
+                    if (this.Properties.ContainsKey(key))
+                    { this.Properties[key] = value; return; }
 
-                // Check instance for existance of type first
-                var memberInfos = InstanceType.GetMember(key, BindingFlags.Public | BindingFlags.GetProperty);
-                if (memberInfos != null && memberInfos.Length > 0)
-                { SetProperty(this.Instance, key, value); }
-                else
-                { this.Properties[key] = value; }
+                    // Check instance for existance of type first
+                    var memberInfos = this.InstanceType.GetMember(key, BindingFlags.Public | BindingFlags.GetProperty);
+                    if (memberInfos != null && memberInfos.Length > 0)
+                    { SetProperty(this.Instance, key, value); }
+                    else
+                    { this.Properties[key] = value; }
+                }
             }
         }
 
