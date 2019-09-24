@@ -84,6 +84,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Classes\Dynamic.cs" />
+    <Compile Include="Extensions\DbCommandExtensions.cs" />
+    <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="Repositories\BaseSQLRepository.cs" />
     <Compile Include="Extensions\IEnumerableGenericExtensions.cs" />
     <Compile Include="Interfaces\IDataRepository.cs" />
