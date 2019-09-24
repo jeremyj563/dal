@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Data.Common;
 using System.Data.Entity.Design.PluralizationServices;
 using System.Globalization;
@@ -14,17 +15,18 @@ namespace DataRepositories
     public abstract class BaseSQLRepository : IDataRepository
     {
 
-        protected internal string ConnectionString { get; }
-        protected internal string IDCommand { get; }
-        protected internal DbConnection Connection { get; set; }
+        protected string ConnectionString { get; }
+        protected string TableName { get; set; }
+        protected string IDCommand { get; }
+        protected DbConnection Connection { get; set; }
 
-        protected internal BaseSQLRepository(string connectionString, string idCommand)
+        protected BaseSQLRepository(string connectionString, string idCommand)
         {
             this.ConnectionString = connectionString;
             this.IDCommand = idCommand;
         }
 
-        #region External Interface
+        #region Public Methods
 
         public abstract Task<int> NewAsync<TSchema>(string cmd, TSchema schema) where TSchema : new();
         public abstract Task NewAsync<TSchema>(IEnumerable<TSchema> instances, string tableName) where TSchema : new();
@@ -36,9 +38,9 @@ namespace DataRepositories
 
         #endregion
 
-        #region Internal Methods
+        #region Protected Methods
 
-        protected async internal Task<IQueryable<TSchema>> QueryAsync<TConnection, TCommand, TSchema>(string cmd, (string, object)[] @params)
+        protected async Task<IQueryable<TSchema>> QueryAsync<TConnection, TCommand, TSchema>(string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
             where TSchema : new()
@@ -49,12 +51,18 @@ namespace DataRepositories
             {
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
                 {
-                    AddParameters<TSchema>(command, @params: @params);
-                    var properties = GetProperties<TSchema>();
+                    if (command.Connection.State == ConnectionState.Open)
+                    {
+                        AddParameters<TSchema>(command, @params: @params);
+                        var properties = GetProperties<TSchema>();
 
-                    DbDataReader reader = command.ExecuteReader();
-                    while (await reader.ReadAsync())
-                    { instances.Add(NewInstance<TSchema>(properties, reader)); }
+                        DbDataReader reader = await command.ExecuteReaderAsync();
+                        if (!reader.IsClosed && reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            { instances.Add(NewInstance<TSchema>(properties, reader)); }
+                        }
+                    }
                 }
             }
             catch (Exception) { throw; }
@@ -63,7 +71,7 @@ namespace DataRepositories
             return instances.AsQueryable();
         }
 
-        protected async internal Task<IQueryable<Dynamic>> QueryDynamicAsync<TConnection, TCommand>(Dynamic schema, string cmd, (string, object)[] @params)
+        protected async Task<IQueryable<Dynamic>> QueryDynamicAsync<TConnection, TCommand>(Dynamic schema, string cmd, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
         {
@@ -73,12 +81,18 @@ namespace DataRepositories
             {
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd))
                 {
-                    AddParameters<dynamic>(command, @params: @params);
-                    string[] properties = GetDynamicProperties(schema);
+                    if (command.Connection.State == ConnectionState.Open)
+                    {
+                        AddParameters<Dynamic>(command, @params: @params);
+                        var properties = GetDynamicProperties(schema);
 
-                    DbDataReader reader = command.ExecuteReader();
-                    while (await reader.ReadAsync())
-                    { instances.Add(NewDynamicInstance(schema, properties, reader)); }
+                        DbDataReader reader = await command.ExecuteReaderAsync();
+                        if (!reader.IsClosed && reader.HasRows)
+                        {
+                            while (await reader.ReadAsync())
+                            { instances.Add(NewDynamicInstance(schema, properties, reader)); }
+                        }
+                    }
                 }
             }
             catch (Exception) { throw; }
@@ -87,12 +101,12 @@ namespace DataRepositories
             return instances.AsQueryable();
         }
 
-        protected async internal Task<int> NonQueryAsync<TConnection, TCommand, TSchema>(string cmd, TSchema schema, (string, object)[] @params)
+        protected async Task<int> NonQueryAsync<TConnection, TCommand, TSchema>(string cmd, TSchema schema, (string, object)[] @params)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
             where TSchema : new()
         {
-            int result = default(int);
+            int result = default;
 
             try
             {
@@ -100,9 +114,12 @@ namespace DataRepositories
                 {
                     AddParameters(command, schema, @params);
 
-                    var id = await command.ExecuteScalarAsync();
-                    if (id is int)
-                    { result = (int)id; }
+                    if (this.Connection.State == ConnectionState.Open)
+                    {
+                        var id = await command.ExecuteScalarAsync();
+                        if (id is int)
+                        { result = (int)id; }
+                    }
                 }
             }
             catch (Exception) { throw; }
@@ -111,7 +128,38 @@ namespace DataRepositories
             return result;
         }
 
-        protected async internal Task<TCommand> NewCommandAsync<TConnection, TCommand>(string cmd)
+        protected async Task<bool> OpenConnectionAsync<TConnection>()
+            where TConnection : DbConnection, new()
+        {
+            try
+            {
+                this.Connection = new TConnection();
+                this.Connection.ConnectionString = this.ConnectionString;
+                await this.Connection.OpenAsync();
+            }
+            catch (Exception) { throw; }
+
+            if (this.Connection.State == ConnectionState.Open)
+            { return true; }
+
+            return false;
+        }
+
+        protected string Pluralize(ref string text)
+        {
+            var info = new CultureInfo("en-us");
+            var service = PluralizationService.CreateService(info);
+            if (service.IsSingular(text))
+            { text = service.Pluralize(text); }
+
+            return text;
+        }
+
+        #endregion
+
+        #region Private Methods
+
+        private async Task<TCommand> NewCommandAsync<TConnection, TCommand>(string cmd)
             where TConnection : DbConnection, new()
             where TCommand : DbCommand, new()
         {
@@ -124,21 +172,7 @@ namespace DataRepositories
             return command;
         }
 
-        protected async internal Task<bool> OpenConnectionAsync<TConnection>()
-            where TConnection : DbConnection, new()
-        {
-            try
-            {
-                this.Connection = new TConnection();
-                this.Connection.ConnectionString = this.ConnectionString;
-                await this.Connection.OpenAsync();
-            }
-            catch (Exception) { throw; }
-
-            return true;
-        }
-
-        protected internal void AddParameters<TSchema>(DbCommand command, TSchema schema = default(TSchema), (string, object)[] @params = null)
+        private void AddParameters<TSchema>(DbCommand command, TSchema schema = default, (string, object)[] @params = null)
         {
             if (@params != null)
             {
@@ -170,15 +204,15 @@ namespace DataRepositories
             }
         }
 
-        protected internal TSchema NewInstance<TSchema>(PropertyInfo[] properties, DbDataReader reader) where TSchema : new()
+        private TSchema NewInstance<TSchema>(PropertyInfo[] properties, IDataReader reader) where TSchema : new()
         {
             var instance = new TSchema();
 
             foreach (PropertyInfo property in properties)
             {
-                if (property.CanWrite)
+                if (this.Connection.State == ConnectionState.Open && property.CanWrite)
                 {
-                    if (!reader.IsDBNull(reader.GetOrdinal(property.Name)))
+                    if (!reader.IsClosed && !reader.IsDBNull(reader.GetOrdinal(property.Name)))
                     {
                         var value = reader[property.Name];
                         if (value is string)
@@ -192,44 +226,35 @@ namespace DataRepositories
             return instance;
         }
 
-        protected internal Dynamic NewDynamicInstance(Dynamic prototype, string[] properties, DbDataReader reader)
+        private Dynamic NewDynamicInstance(Dynamic prototype, string[] properties, DbDataReader reader)
         {
             var instance = prototype.Clone() as Dynamic;
             instance.Properties.Clear();
 
             foreach (string property in properties)
             {
-                if (!reader.IsDBNull(reader.GetOrdinal(property)))
+                object value = null;
+                if (!reader.IsClosed && !reader.IsDBNull(reader.GetOrdinal(property)))
                 {
-                    var value = reader[property];
+                    value = reader[property];
                     if (value is string)
                     { value = (value as string).Trim(); }
-
-                    instance[property] = value;
                 }
+
+                instance[property] = value;
             }
 
             return instance;
         }
 
-        protected internal PropertyInfo[] GetProperties<TSchema>()
+        private PropertyInfo[] GetProperties<TSchema>()
         {
             return typeof(TSchema).GetProperties(BindingFlags.Public | BindingFlags.Instance);
         }
 
-        protected internal string[] GetDynamicProperties(Dynamic instance)
+        private string[] GetDynamicProperties(Dynamic instance)
         {
             return instance.Properties.Select(p => p.Key).ToArray();
-        }
-
-        protected internal string Pluralize(ref string text)
-        {
-            var info = new CultureInfo("en-us");
-            var service = PluralizationService.CreateService(info);
-            if (service.IsSingular(text))
-            { text = service.Pluralize(text); }
-
-            return text;
         }
 
         #endregion
