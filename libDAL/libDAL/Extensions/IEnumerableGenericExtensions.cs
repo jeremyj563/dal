@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Reflection;
@@ -6,27 +6,31 @@ using System.Reflection;
 namespace DataRepositories.Extensions
 {
     /// <summary>
-    /// Extension methods for <see cref="System.Data.DataTable"/>
+    /// Extension methods for <see cref="DataTable"/>
     /// Source: https://docs.microsoft.com/en-us/dotnet/framework/data/adonet/implement-copytodatatable-where-type-not-a-datarow
     /// </summary>
     public static class IEnumerableGenericExtensions
     {
-        public static DataTable CopyToDataTable<T>(this IEnumerable<T> source)
+        public static DataTable ToDataTable<T>(this IEnumerable<T> source)
         {
-            return new ObjectShredder<T>().Shred(source, null/* TODO Change to default(_) if this is not a reference type */, null/* TODO Change to default(_) if this is not a reference type */);
+            return ToDataTable<T>(source, null, null);
         }
 
-        public static DataTable CopyToDataTable<T>(this IEnumerable<T> source, DataTable table, LoadOption? options)
+        public static DataTable ToDataTable<T>(this IEnumerable<T> source, DataTable table, LoadOption? options)
         {
             return new ObjectShredder<T>().Shred(source, table, options);
         }
 
         private class ObjectShredder<T>
         {
+            #region Private Properties
+
             private FieldInfo[] Fields { get; set; }
             private Dictionary<string, int> OrdinalMap { get; set; }
             private PropertyInfo[] Properties { get; set; }
             private Type Type { get; set; }
+
+            #endregion
 
             public ObjectShredder()
             {
@@ -36,39 +40,15 @@ namespace DataRepositories.Extensions
                 this.OrdinalMap = new Dictionary<string, int>();
             }
 
-            public object[] ShredObject(DataTable table, T instance)
-            {
-                FieldInfo[] fields = this.Fields;
-                PropertyInfo[] properties = this.Properties;
+            #region Public Methods
 
-                if (!(instance is T))
-                {
-                    // If the instance is derived from T, extend the table schema
-                    // and get the properties and fields.
-                    this.ExtendTable(table, instance.GetType());
-                    fields = instance.GetType().GetFields();
-                    properties = instance.GetType().GetProperties();
-                }
-
-                // Add the property and field values of the instance to an array.
-                var values = new object[table.Columns.Count - 1 + 1];
-                foreach (FieldInfo field in fields)
-                    values[this.OrdinalMap[field.Name]] = field.GetValue(instance);
-                foreach (PropertyInfo property in properties)
-                    values[this.OrdinalMap[property.Name]] = property.GetValue(instance, null);
-
-                // Return the property and field values of the instance.
-                return values;
-            }
-
-            /// <summary>Loads a DataTable from a sequence of objects.</summary>
-            ///         ''' <param name="source">The sequence of objects to load into the DataTable.</param>
-            ///         ''' <param name="table">The input table. The schema of the table must match that the type T. If the table is null, a new table is created with a schema created from the public properties and fields of the type T.</param>
-            ///         ''' <param name="options">Specifies how values from the source sequence will be applied to existing rows in the table.</param>
-            ///         ''' <returns>A DataTable created from the source sequence.</returns>
+            ///<summary>Loads a DataTable from a sequence of objects.</summary>
+            ///<param name="source">The sequence of objects to load into the DataTable.</param>
+            ///<param name="table">The input table. The schema of the table must match that the type T. If the table is null, a new table is created with a schema created from the public properties and fields of the type T.</param>
+            ///<param name="options">Specifies how values from the source sequence will be applied to existing rows in the table.</param>
+            ///<returns>A DataTable created from the source sequence.</returns>
             public DataTable Shred(IEnumerable<T> source, DataTable table, LoadOption? options)
             {
-
                 // Load the table from the scalar sequence if T is a primitive type.
                 if (typeof(T).IsPrimitive)
                     return this.ShredPrimitive(source, table, options);
@@ -98,7 +78,34 @@ namespace DataRepositories.Extensions
                 return table;
             }
 
-            public DataTable ShredPrimitive(IEnumerable<T> source, DataTable table, LoadOption? options)
+            #endregion
+
+            #region Private Methods
+
+            private object[] ShredObject(DataTable table, T instance)
+            {
+                FieldInfo[] fields = this.Fields;
+                PropertyInfo[] properties = this.Properties;
+
+                if (!(instance is T))
+                {
+                    // If the instance is derived from T, extend the table schema and get the properties and fields.
+                    this.ExtendTable(table, instance.GetType());
+                    fields = instance.GetType().GetFields();
+                    properties = instance.GetType().GetProperties();
+                }
+
+                // Add the property and field values of the instance to an array.
+                var values = new object[table.Columns.Count - 1 + 1];
+                foreach (FieldInfo field in fields)
+                    values[this.OrdinalMap[field.Name]] = field.GetValue(instance);
+                foreach (PropertyInfo property in properties)
+                    values[this.OrdinalMap[property.Name]] = property.GetValue(instance, null);
+
+                return values;
+            }
+
+            private DataTable ShredPrimitive(IEnumerable<T> source, DataTable table, LoadOption? options)
             {
                 // Create a new table if the input table is null.
                 if (table == null)
@@ -128,10 +135,9 @@ namespace DataRepositories.Extensions
                 return table;
             }
 
-            public DataTable ExtendTable(DataTable table, Type type)
+            private DataTable ExtendTable(DataTable table, Type type)
             {
-                // Extend the table schema if the input table was null or if the value 
-                // in the sequence is derived from type T.
+                // Extend the table schema if the input table was null or if the value in the sequence is derived from type T.
                 foreach (FieldInfo f in type.GetFields())
                 {
                     if (!this.OrdinalMap.ContainsKey(f.Name))
@@ -161,6 +167,8 @@ namespace DataRepositories.Extensions
 
                 return table;
             }
+
+            #endregion
         }
     }
 }
