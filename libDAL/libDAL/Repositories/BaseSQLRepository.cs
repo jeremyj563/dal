@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using DataRepositories.Classes;
 using DataRepositories.Interfaces;
+using libDAL.Extensions;
 
 namespace DataRepositories
 {
@@ -53,14 +54,13 @@ namespace DataRepositories
                 {
                     if (command.Connection.State == ConnectionState.Open)
                     {
-                        AddParameters<TSchema>(command, @params: @params);
-                        var properties = GetProperties<TSchema>();
+                        command.AddParameters<TSchema>(@params);
 
                         DbDataReader reader = await command.ExecuteReaderAsync();
                         if (!reader.IsClosed && reader.HasRows)
                         {
                             while (await reader.ReadAsync())
-                            { instances.Add(NewInstance<TSchema>(properties, reader)); }
+                            { instances.Add(NewInstance<TSchema>(reader)); }
                         }
                     }
                 }
@@ -83,7 +83,7 @@ namespace DataRepositories
                 {
                     if (command.Connection.State == ConnectionState.Open)
                     {
-                        AddParameters<Dynamic>(command, @params: @params);
+                        command.AddParameters<Dynamic>(@params);
                         var properties = GetDynamicProperties(schema);
 
                         DbDataReader reader = await command.ExecuteReaderAsync();
@@ -112,7 +112,7 @@ namespace DataRepositories
             {
                 using (var command = await NewCommandAsync<TConnection, TCommand>(cmd + this.IDCommand))
                 {
-                    AddParameters(command, schema, @params);
+                    command.AddParameters(@params, schema);
 
                     if (this.Connection.State == ConnectionState.Open)
                     {
@@ -172,43 +172,11 @@ namespace DataRepositories
             return command;
         }
 
-        private void AddParameters<TSchema>(DbCommand command, TSchema schema = default, (string, object)[] @params = null)
-        {
-            if (@params != null)
-            {
-                foreach ((string key, object value) param in @params)
-                {
-                    var parameter = command.CreateParameter();
-                    parameter.ParameterName = param.key;
-                    parameter.Value = param.value;
-
-                    command.Parameters.Add(parameter);
-                }
-            }
-
-            if (schema != null)
-            {
-                foreach (PropertyInfo property in GetProperties<TSchema>())
-                {
-                    if (property.CanRead)
-                    {
-                        var value = property.GetValue(schema, null);
-                        if (value == null) value = DBNull.Value;
-
-                        var parameter = command.CreateParameter();
-                        parameter.ParameterName = property.Name;
-                        parameter.Value = value;
-                        command.Parameters.Add(parameter);
-                    }
-                }
-            }
-        }
-
-        private TSchema NewInstance<TSchema>(PropertyInfo[] properties, IDataReader reader) where TSchema : new()
+        private TSchema NewInstance<TSchema>(IDataReader reader) where TSchema : new()
         {
             var instance = new TSchema();
 
-            foreach (PropertyInfo property in properties)
+            foreach (PropertyInfo property in typeof(TSchema).GetPublicInstanceProperties())
             {
                 if (this.Connection.State == ConnectionState.Open && property.CanWrite)
                 {
